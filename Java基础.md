@@ -532,11 +532,13 @@ class DynamicProxy {
 
 ## 关注点
 
-### JDK和JRE
+### JRE JDK JVM
 
-JDK：Java Development Kit的简称，java开发工具包，提供了java的开发环境和运行环境。
-JRE：JavaRuntimeEnvironment的简称，java运行环境，为java的运行提供了所需环境。
-具体来说JDK其实包含了JRE，同时还包含了编译java源码的编译器javac，还包含了很多java程序调试和分析的工具。简单来说：如果你需要运行java程序，只需安装JRE就可以了，如果你需要编写java程序，需要安装JDK。
+**JRE(JavaRuntimeEnvironment，Java运行环境)**，也就是Java平台。所有的Java 程序都要在JRE下才能运行。普通用户只需要运行已开发好的java程序，安装JRE即可。
+
+**JDK(Java Development Kit)**是程序开发者用来来编译、调试java程序用的开发工具包。JDK的工具也是Java程序，也需要JRE才能运行。为了保持JDK的独立性和完整性，在JDK的安装过程中，JRE也是 安装的一部分。所以，在JDK的安装目录下有一个名为jre的目录，用于存放JRE文件。
+
+**JVM(JavaVirtualMachine，Java虚拟机)**是JRE的一部分。它是一个虚构出来的计算机，是通过在实际的计算机上仿真模拟各种计算机功能来实现的。JVM有自己完善的硬件架构，如处理器、堆栈、寄存器等，还具有相应的指令系统。Java语言最重要的特点就是跨平台运行。使用JVM就是为了支持与操作系统无关，实现跨平台。
 
 ### equals和==
 
