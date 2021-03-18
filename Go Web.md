@@ -146,3 +146,12 @@ redis的备份也分为两种：热备份和冷备份，redis也支持master/sla
 # 开发web框架
 
 ![img](https://astaxie.gitbooks.io/build-web-application-with-golang/content/zh/images/navi13.png?raw=true) 
+
+
+
+# 集成组件
+
+**Casbin** 
+
+
+

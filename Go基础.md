@@ -1,6 +1,4 @@
-# 基础
-
-## 关键字
+# 关键字
 
 面列举了 Go 代码中会使用到的 25 个关键字或保留字：
 
@@ -108,7 +106,7 @@ for i := 0; i < 5; i++ {
 //_操作其实是引入该包，而不直接使用包里面的函数，而是调用了该包里面的init函数
 ```
 
-## 数据结构
+# 数据结构
 
 **分类**
 
@@ -176,7 +174,7 @@ copy(sliceC, sliceB)
 
 Map 是一种无序的键值对的集合。Map 最重要的一点是通过 key 来快速检索数据，key 类似于索引，指向数据的值。 
 
-**内置的运算符：**
+# 运算符
 
 - 算术运算符
 - 关系运算符
@@ -185,7 +183,7 @@ Map 是一种无序的键值对的集合。Map 最重要的一点是通过 key �
 - 赋值运算符
 - 其他运算符
 
-## 函数式
+# 函数式
 
 **函数传值和传引用**
 
@@ -257,7 +255,7 @@ Go程序会自动调用`init()`和`main()`，所以你不需要在任何地方�
 
 ![img](https://astaxie.gitbooks.io/build-web-application-with-golang/content/zh/images/2.3.init.png?raw=true)
 
-## 异常处理
+# 异常错误
 
 **1、异常**
 
@@ -397,7 +395,7 @@ func main() {
 }
 ```
 
-## 面向对象
+# 面向对象
 
 **结构体struct**
 
@@ -690,9 +688,9 @@ func justifyType(x interface{}) {
 
 反射就是能检查程序在运行时的状态。我们一般用到的包是reflect包。。。
 
-## 常用库
+# 常用库
 
-**内置库**
+## **内置库**
 
 ```go
 encoding/json  Unmarshal json.Marshal(s) //json标准包来编解码JSON数据
@@ -708,14 +706,26 @@ net/http
 net/rpc
 ```
 
-```go
-func testJson() {
-   var s Serverslice
-   str := `{"servers":[{"serverName":"Shanghai_VPN","serverIP":"127.0.0.1"},{"serverName":"Beijing_VPN","serverIP":"127.0.0.2"}]}`
-   json.Unmarshal([]byte(str), &s)
-   fmt.Println(s)
-}
+**fmt**
 
+```go
+//Print系列函数会将内容输出到系统的标准输出，区别在于Print函数直接输出内容，Printf函数支持格式化输出字符串，Println函数会在输出内容的结尾添加一个换行符。
+fmt.Print("在终端打印该信息。")
+name := "枯藤"
+fmt.Printf("我是：%s\n", name)
+fmt.Println("在终端打印单独一行显示")
+//Sprint系列函数会把传入的数据生成并返回一个字符串。
+s2 := fmt.Sprintf("name:%s,age:%d", name, 12)
+fmt.Printf(s2)
+//Errorf函数根据format参数生成格式化字符串并返回一个包含该字符串的错误。
+err := fmt.Errorf("这是一个错误")
+_ = err
+```
+
+**IO**
+
+```go
+//////////////////////////////////
 func makeFile() {
    os.Mkdir("tmptest", 0777)
    fileName := "tmp.txt"
@@ -748,7 +758,93 @@ func readFile() {
       os.Stdout.Write(buf[:n])
    }
 }
+//////////////////////////////////bufio包实现了带缓冲区的读写，是对文件读写的封装 bufio缓冲写数据
+func wr() {
+    // w写 r读 x执行   w  2   r  4   x  1
+    file, err := os.OpenFile("./xxx.txt", os.O_CREATE|os.O_WRONLY, 0666)
+    if err != nil {
+        return
+    }
+    defer file.Close()
+    // 获取writer对象
+    writer := bufio.NewWriter(file)
+    for i := 0; i < 10; i++ {
+        writer.WriteString("hello\n")
+    }
+    // 刷新缓冲区，强制写出
+    writer.Flush()
+}
 
+func re() {
+    file, err := os.Open("./xxx.txt")
+    if err != nil {
+        return
+    }
+    defer file.Close()
+    reader := bufio.NewReader(file)
+    for {
+        line, _, err := reader.ReadLine()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            return
+        }
+        fmt.Println(string(line))
+    }
+
+}
+//////////////////////////////////ioutil 工具包写文件 工具包读取文件
+func wr2() {
+   err := ioutil.WriteFile("./yyy.txt", []byte("www.5lmh.com"), 0666)
+   if err != nil {
+      fmt.Println(err)
+      return
+   }
+}
+
+func re2() {
+   content, err := ioutil.ReadFile("./yyy.txt")
+   if err != nil {
+      fmt.Println(err)
+      return
+   }
+   fmt.Println(string(content))
+}
+```
+
+**time**
+
+```go
+now := time.Now()
+fmt.Printf("current time:%v\n", now)
+year := now.Year()     //年
+month := now.Month()   //月
+day := now.Day()       //日
+hour := now.Hour()     //小时
+minute := now.Minute() //分钟
+second := now.Second() //秒
+fmt.Printf("%d-%02d-%02d %02d:%02d:%02d\n", year, month, day, hour, minute, second)
+timestamp1 := now.Unix()     //时间戳
+timestamp2 := now.UnixNano() //纳秒时间戳
+fmt.Printf("current timestamp1:%v\n", timestamp1)
+fmt.Printf("current timestamp2:%v\n", timestamp2)
+later := now.Add(time.Hour)
+fmt.Println(later)
+ticker := time.Tick(time.Second)
+for i := range ticker {
+   fmt.Println(i)//每秒都会执行的任务
+}
+```
+
+**strings**
+
+...
+
+**strconv**
+
+```go
+//strconv包实现了基本数据类型与其字符串表示的转换
 func testStrOp() {
    // str operation
    fmt.Println(strings.Contains("seafood", "foo"))
@@ -776,188 +872,193 @@ func checkError(e error) {
 }
 ```
 
+**Log**
 
+```go
+func init() {
+   logFile, err := os.OpenFile("./xx.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+   if err != nil {
+      fmt.Println("open log file failed, err:", err)
+      return
+   }
+   log.SetOutput(logFile)
+   log.SetFlags(log.Llongfile | log.Lmicroseconds | log.Ldate)
+   log.Println("这是自定义的logger记录的日志。")
+}
+// Go内置的log库功能有限，例如无法满足记录不同级别日志的情况，我们在实际的项目中根据自己的需要选择使用第三方的日志库，如logrus、zap等。
+```
 
-**第三方库**
+**net/http  重点！**
+
+```go
+var BASEURL = "http://127.0.0.1:8080"
+
+func httpServer() {
+   http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+      fmt.Fprintln(w, "hello world")
+   })
+   err := http.ListenAndServe(":8080", nil)
+   if err != nil {
+      fmt.Printf("http server failed, err:%v\n", err)
+      return
+   }
+}
+
+func httpGetReq() {
+   apiUrl := fmt.Sprintf("%s/get", BASEURL)
+   // URL param
+   data := url.Values{}
+   data.Set("name", "枯藤")
+   data.Set("age", "18")
+   u, err := url.ParseRequestURI(apiUrl)
+   if err != nil {
+      fmt.Printf("parse url requestUrl failed,err:%v\n", err)
+   }
+   u.RawQuery = data.Encode() // URL encode
+   fmt.Println(u.String())
+   resp, err := http.Get(u.String())
+   if err != nil {
+      fmt.Println("post failed, err:%v\n", err)
+      return
+   }
+   defer resp.Body.Close()
+   b, err := ioutil.ReadAll(resp.Body)
+   if err != nil {
+      fmt.Println("get resp failed,err:%v\n", err)
+      return
+   }
+   fmt.Println(string(b))
+}
+
+func httpPostReq() {
+   url := fmt.Sprintf("%s/post", BASEURL)
+   contentType := "application/json"
+   data := `{"name":"枯藤","age":18}`
+   resp, err := http.Post(url, contentType, strings.NewReader(data))
+   if err != nil {
+      fmt.Println("post failed, err:%v\n", err)
+      return
+   }
+   defer resp.Body.Close()
+   b, err := ioutil.ReadAll(resp.Body)
+   if err != nil {
+      fmt.Println("get resp failed,err:%v\n", err)
+      return
+   }
+   fmt.Println(string(b))
+}
+```
+
+**json && xml**
+
+```go
+type Person struct {
+    Name  string
+    Hobby string
+}
+func main() {
+    p := Person{"5lmh.com", "女"}
+    // 编码json
+    b, err := json.Marshal(p)
+    if err != nil {
+        fmt.Println("json err ", err)
+    }
+    fmt.Println(string(b))
+}
+```
+
+```go
+type Person struct {
+    Age       int    `json:"age,string"`
+    Name      string `json:"name"`
+    Niubility bool   `json:"niubility"`
+}
+
+func main() {
+    b := []byte(`{"age":"18","name":"5lmh.com","marry":false}`)
+    var p Person
+    err := json.Unmarshal(b, &p)
+    if err != nil {
+        fmt.Println(err)
+    }
+    fmt.Println(p)
+}
+```
+
+```go
+func main() {
+    // 假数据
+    // int和float64都当float64
+    b := []byte(`{"age":1.3,"name":"5lmh.com","marry":false}`)
+
+    // 声明接口
+    var i interface{}
+    err := json.Unmarshal(b, &i)
+    if err != nil {
+        fmt.Println(err)
+    }
+    // 自动转到map
+    fmt.Println(i)
+    // 可以判断类型
+    m := i.(map[string]interface{})
+    for k, v := range m {
+        switch vv := v.(type) {
+        case float64:
+            fmt.Println(k, "是float64类型", vv)
+        case string:
+            fmt.Println(k, "是string类型", vv)
+        default:
+            fmt.Println("其他")
+        }
+    }
+}
+```
+
+**Flag**
+
+```go
+//Go语言内置的flag包实现了命令行参数的解析，flag包使得开发命令行工具更为简单。
+//os.Args是一个[]string
+if len(os.Args) > 0 {
+   for index, arg := range os.Args {
+      fmt.Printf("args[%d]=%v\n", index, arg)
+   }
+}
+//定义命令行参数方式1
+var name string
+var age int
+var married bool
+var delay time.Duration
+flag.StringVar(&name, "name", "张三", "姓名")
+flag.IntVar(&age, "age", 18, "年龄")
+flag.BoolVar(&married, "married", false, "婚否")
+flag.DurationVar(&delay, "d", 0, "延迟的时间间隔")
+
+//解析命令行参数
+flag.Parse()
+fmt.Println(name, age, married, delay)
+//返回命令行参数后的其他参数
+fmt.Println(flag.Args())
+//返回命令行参数后的其他参数个数
+fmt.Println(flag.NArg())
+//返回使用的命令行参数个数
+fmt.Println(flag.NFlag())
+// $ ./flag_demo -name pprof --age 28 -married=false -d=1h30m
+```
+
+**reflect**
+
+。。。
+
+## **第三方库**
 
 ```go
 mysql驱动
 orm db
 simplejson
-
-
-```
-
-
-
-# 进阶
-
-## 切片
-
-
-
-> 参考：http://www.topgoer.com/go%E5%9F%BA%E7%A1%80/Slice%E5%BA%95%E5%B1%82%E5%AE%9E%E7%8E%B0.html
-
-## Map
-
-其底层存储方式为数组 。。。
-
-
-
-## 网络编程
-
-**TCP IP**
-
-tcp ip http协议。。。
-
-socket图解：
-
-![socket图解](http://www.topgoer.com/static/6.1/3.png) 
-
-**REST**
-
-。。。
-
-**RPC**
-
-。。。
-
-**WebSocket**
-
-WebSocket是一种在单个TCP连接上进行全双工通信的协议，使得客户端和服务器之间的数据交换变得更加简单，允许服务端主动向客户端推送数据，浏览器和服务器只需要完成一次握手，两者之间就直接可以创建持久性的连接，并进行双向数据传输。需要安装第三方包： github.com/gorilla/websocket。
-
-> 应用：http://www.topgoer.com/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/WebSocket%E7%BC%96%E7%A8%8B.html 多人在线聊天
->
-> 有必要去搞搞的。。。
-
-**TCP粘包**
-
-客户端分10次发送的数据，在服务端并没有成功的输出10次，而是多条数据“粘”到了一起。为什么会出现粘包
-
-主要原因就是tcp数据传递模式是流模式，在保持长连接的时候可以进行多次的收和发。“粘包”可发生在发送端也可发生在接收端：
+...
 
 ```
-    1.由Nagle算法造成的发送端的粘包：Nagle算法是一种改善网络传输效率的算法。简单来说就是当我们提交一段数据给TCP发送时，TCP并不立刻发送此段数据，而是等待一小段时间看看在等待期间是否还有要发送的数据，若有则会一次把这两段数据发送出去。
-    2.接收端接收不及时造成的接收端粘包：TCP会把接收到的数据存在自己的缓冲区中，然后通知应用层取数据。当应用层由于某些原因不能及时的把TCP的数据取出来，就会造成TCP缓冲区中存放了几段数据。
-```
-
-解决办法：
-
-出现”粘包”的关键在于接收方不确定将要传输的数据包的大小，因此我们可以对数据包进行封包和拆包的操作。
-
-封包：封包就是给一段数据加上包头，这样一来数据包就分为包头和包体两部分内容了(过滤非法包时封包会加入”包尾”内容)。包头部分的长度是固定的，并且它存储了包体的长度，根据包头长度固定以及包头中含有包体长度的变量就能正确的拆分出一个完整的数据包。
-
-> 参考：http://www.topgoer.com/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/socket%E7%BC%96%E7%A8%8B/TCP%E9%BB%8F%E5%8C%85.html
-
-
-
-## 并发编程
-
-goroutine是Go并行设计的核心。**goroutine说到底其实就是协程**，但是它比线程更小，十几个goroutine可能体现在底层就是五六个线程，Go语言内部帮你实现了这些goroutine之间的内存共享。执行goroutine只需极少的栈内存(大概是4~5KB)，当然会根据相应的数据伸缩。也正因为如此，可同时运行成千上万个并发任务。goroutine比thread更易用、更高效、更轻便。 
-
-```
-协程：独立的栈空间，共享堆空间，调度由用户自己控制，本质上有点类似于用户级线程，这些用户级线程的调度也是自己实现的。
-线程：一个线程上可以跑多个协程，协程是轻量级的线程。
-
-多线程程序在一个核的cpu上运行，就是并发。
-多线程程序在多个核的cpu上运行，就是并行。
-
-goroutine 只是由官方实现的超级"线程池"。
-每个实力4~5KB的栈内存占用和由于实现机制而大幅减少的创建和销毁开销是go高并发的根本原因。goroutine 奉行通过通信来共享内存，而不是共享内存来通信。
-```
-
-```go
-//这一次的执行结果只打印了main goroutine done!，并没有打印Hello Goroutine。
-//在程序启动时，Go程序就会为main()函数创建一个默认的goroutine。当main()函数返回的时候该goroutine就结束了，所有在main()函数中启动的goroutine会一同结束。即如果主协程退出了，其他任务不执行了
-func hello() {
-   fmt.Println("Hello Goroutine!")
-}
-func main() {
-   go hello()
-   fmt.Println("main goroutine done!")
-}
-```
-
-**chan**
-
-通道（channel）是用来传递数据的一个数据结构。通道可用于两个 goroutine 之间通过传递一个指定类型的值来同步运行和通讯。操作符 `<-` 用于指定通道的方向，发送或接收。如果未指定方向，则为双向通道。
-
-默认情况下，channel接收和发送数据都是阻塞的，除非另一端已经准备好，这样就使得Goroutines同步变的更加的简单，而不需要显式的lock。所谓阻塞，也就是如果读取（value := <-ch）它将会被阻塞，直到有数据接收。其次，任何发送（ch<-5）将会被阻塞，直到数据被读出。无缓冲channel是在多个goroutine之间同步很棒的工具。 
-
-缓存通道：
-
-允许指定channel的缓冲大小，很简单，就是channel可以存储多少元素。ch:= make(chan bool, 4)，创建了可以存储4个元素的bool 型channel。在这个channel 中，前4个元素可以无阻塞的写入。当写入第5个元素时，代码将会阻塞，直到其他goroutine从channel 中读取一些元素，腾出空间。 
-
-**select**
-
-与chan通道的发送和接收配合使用。
-
-适应于存在多个channel的时候。select可以监听channel上的数据流动。select默认是阻塞的，只有当监听的channel中有发送或接收可以进行时才会运行，当多个channel都准备好的时候，select是随机的选择一个执行的。select 语句类似于 switch 语句，但是select会随机执行一个可运行的case。如果没有case可运行，它将阻塞，直到有case可运行。select 是Go中的一个控制结构，类似于用于通信的switch语句。每个case必须是一个通信操作IO操作，要么是发送要么是接收。 select 随机执行一个可运行的case。如果没有case可运行，它将阻塞，直到有case可运行。一个默认的子句应该总是可运行的。
-
-```go
-    每个case都必须是一个通信
-    所有channel表达式都会被求值
-    所有被发送的表达式都会被求值
-    如果任意某个通信可以进行，它就执行；其他被忽略。
-    如果有多个case都可以运行，Select会随机公平地选出一个执行。其他不会执行。
-    否则：
-    如果有default子句，则执行该语句。
-    如果没有default字句，select将阻塞，直到某个通信可以运行；Go不会重新对channel或值进行求值。
-    //
-    select { //不停的在这里检测
-    case <-chanl : //检测有没有数据可以读
-    //如果chanl成功读取到数据，则进行该case处理语句
-    case chan2 <- 1 : //检测有没有可以写
-    //如果成功向chan2写入数据，则进行该case处理语句
-    //假如没有default，那么在以上两个条件都不成立的情况下，就会在此阻塞
-    default:
-    //如果以上都没有符合条件，那么则进行default处理流程
-    }
-```
-
-**WaitGroup** 
-
-```go
-var wg sync.WaitGroup
-
-func hello(i int) {
-    defer wg.Done() // goroutine结束就登记-1
-    fmt.Println("Hello Goroutine!", i)
-}
-func main() {
-    for i := 0; i < 10; i++ {
-        wg.Add(1) // 启动一个goroutine就登记+1
-        go hello(i)
-    }
-    wg.Wait() // 等待所有登记的goroutine都结束
-}
-```
-
-
-
-**goroutine与线程**
-
-OS线程（操作系统线程）一般都有固定的栈内存（通常为2MB）。然而一个goroutine的栈在其生命周期开始时只有很小的栈（典型情况下2KB），goroutine的栈不是固定的，他可以按需增大和缩小，goroutine的栈大小限制可以达到1GB，虽然极少会用到这个大。所以在Go语言中一次创建十万左右的goroutine也是可以的。
-
-goroutine调度
-
-**GPM是Go语言运行时（runtime）层面的实现，是go语言自己实现的一套调度系统**。区别于操作系统调度OS线程。
-
-- 1.G很好理解，就是个goroutine的，里面除了存放本goroutine信息外 还有与所在P的绑定等信息。
-- 2.P管理着一组goroutine队列，P里面会存储当前goroutine运行的上下文环境（函数指针，堆栈地址及地址边界），P会对自己管理的goroutine队列做一些调度（比如把占用CPU时间较长的goroutine暂停、运行后续的goroutine等等）当自己的队列消费完了就去全局队列里取，如果全局队列里也消费完了会去其他P的队列里抢任务。
-- 3.M（machine）是Go运行时（runtime）对操作系统内核线程的虚拟， M与内核线程一般是一一映射的关系， 一个groutine最终是要放到M上执行的；
-
-P与M一般也是一一对应的。他们关系是： P管理着一组G挂载在M上运行。当一个G长久阻塞在一个M上时，runtime会新建一个M，阻塞G所在的P会把其他的G 挂载在新建的M上。当旧的G阻塞完成或者认为其已经死掉时 回收旧的M。
-
-P的个数是通过runtime.GOMAXPROCS设定（最大256），Go1.5版本之后默认为物理线程数。 在并发量大的时候会增加一些P和M，但不会太多，切换太频繁的话得不偿失。
-
-单从线程调度讲，Go语言相比起其他语言的优势在于OS线程是由OS内核来调度的，goroutine则是由Go运行时（runtime）自己的调度器调度的，这个调度器使用一个称为m:n调度的技术（复用/调度m个goroutine到n个OS线程）。 其一大特点是**goroutine的调度是在用户态下完成的， 不涉及内核态与用户态之间的频繁切换，包括内存的分配与释放，都是在用户态维护着一块大的内存池， 不直接调用系统的malloc函数**（除非内存池需要改变），成本比调度OS线程低很多。 另一方面充分利用了多核的硬件资源，近似的把若干goroutine均分在物理线程上， 再加上本身goroutine的超轻量，以上种种保证了go调度方面的性能。
-
-
-
-**GMP**
-
-Go 调度器。。。
 
 
 
