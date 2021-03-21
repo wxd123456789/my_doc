@@ -110,7 +110,7 @@ func makechan(t *chantype, size int) *hchan {
 2. 关闭已经被关闭的channel
 3. 向已经关闭的channel写数据
 
-## Slice
+## slice
 
 > 参考：
 >
@@ -118,7 +118,7 @@ func makechan(t *chantype, size int) *hchan {
 >
 > http://wen.topgoer.com/docs/gozhuanjia/gozhuanjiaslice
 
-## Map
+## map
 
 其底层存储方式为数组 。。。
 
@@ -290,14 +290,23 @@ func main() {
 
 ## Context
 
-Golang context是Golang应用开发常用的并发控制技术，它与WaitGroup最大的不同点是context对于派生goroutine有更强的控制力，它可以控制多级的goroutine。context翻译成中文是”上下文”，即它可以控制一组呈树状结构的goroutine，每个goroutine拥有相同的上下文。
+> 引用：https://www.jianshu.com/p/6def5063c1eb
+
+Golang context是Golang应用开发常用的并发控制技术，它与WaitGroup最大的不同点是context对于派生goroutine有更强的控制力，它可以控制多级的goroutine。context翻译成中文是”上下文”，即它可以控制一组呈树状结构的goroutine，每个goroutine拥有相同的上下文。context用于控制goroutine的生命周期。当一个计算任务被goroutine承接了之后，由于某种原因（超时，或者强制退出）我们希望中止这个goroutine的计算任务，那么就用得到这个Context了。 
 
 context实际上只定义了接口，凡是实现该接口的类都可称为是一种context，官方包中实现了几个常用的context，分别可用于不同的场景。 Context仅仅是一个接口定义，根据实现的不同，可以衍生出不同的context类型：
 
 - cancelCtx实现了Context接口，通过WithCancel()创建cancelCtx实例；
 - timerCtx实现了Context接口，通过WithDeadline()和WithTimeout()创建timerCtx实例；
 - valueCtx实现了Context接口，通过WithValue()创建valueCtx实例；
-- 三种context实例可互为父节点，从而可以组合成不同的应用形式；
+
+应用场景：
+
+- 请求的取消，比如一个协程失败强制退出另外几个协程；
+- 请求的超时
+- 在http请求中传递上下文
+
+
 
 ## Mutex
 
@@ -428,33 +437,74 @@ type RWMutex struct {
 
 由以上数据结构可见，读写锁内部仍有一个互斥锁，用于将两个写操作隔离开来，其他的几个都用于隔离读操作和写操作。
 
+## sync.Once
+
+单例模式
+
+## sync.Pool
+
+。。。
+
+
+
 # 调度器
 
-**GPM是Go语言运行时（runtime）层面的实现，是go语言自己实现的一套调度系统**。区别于操作系统调度OS线程。
+> 引用：https://blog.csdn.net/chushoufengli/article/details/114940228
 
-- 1.G很好理解，就是个goroutine的，里面除了存放本goroutine信息外 还有与所在P的绑定等信息。
-- 2.P管理着一组goroutine队列，P里面会存储当前goroutine运行的上下文环境（函数指针，堆栈地址及地址边界），P会对自己管理的goroutine队列做一些调度（比如把占用CPU时间较长的goroutine暂停、运行后续的goroutine等等）当自己的队列消费完了就去全局队列里取，如果全局队列里也消费完了会去其他P的队列里抢任务。
-- 3.M（machine）是Go运行时（runtime）对操作系统内核线程的虚拟， M与内核线程一般是一一映射的关系， 一个groutine最终是要放到M上执行的；
+一个线程分为 内核态线程 和 用户态线程，在线程切换时，前者比后者需要更多的资源。而一个 “用户态线程” 必须要绑定一个 “内核态线程”，但是 CPU 并不知道有 “用户态线程” 的存在，它只知道它运行的是一个 “内核态线程”(Linux 的 PCB 进程控制块)。
 
-P与M一般也是一一对应的。他们关系是： P管理着一组G挂载在M上运行。当一个G长久阻塞在一个M上时，runtime会新建一个M，阻塞G所在的P会把其他的G 挂载在新建的M上。当旧的G阻塞完成或者认为其已经死掉时 回收旧的M。
+**线程-协程-GMP的关系**
 
-P的个数是通过runtime.GOMAXPROCS设定（最大256），Go1.5版本之后默认为物理线程数。 在并发量大的时候会增加一些P和M，但不会太多，切换太频繁的话得不偿失。
+thread，线程，分为内核态和用户态。
 
-单从线程调度讲，Go语言相比起其他语言的优势在于OS线程是由OS内核来调度的，goroutine则是由Go运行时（runtime）自己的调度器调度的，这个调度器使用一个称为m:n调度的技术（复用/调度m个goroutine到n个OS线程）。 其一大特点是**goroutine的调度是在用户态下完成的， 不涉及内核态与用户态之间的频繁切换，包括内存的分配与释放，都是在用户态维护着一块大的内存池， 不直接调用系统的malloc函数**（除非内存池需要改变），成本比调度OS线程低很多。 另一方面充分利用了多核的硬件资源，近似的把若干goroutine均分在物理线程上， 再加上本身goroutine的超轻量，以上种种保证了go调度方面的性能。
+用户态线程，即coroutine。goroutine是golang里的coroutine。
 
-Goroutine主要概念如下：
+cpu通过分配cpu时间片直接调度内核级线程thread，thread和goroutine多对多绑定，协程调度器使用GMP模型。
 
-- G（Goroutine）: 即Go协程，每个go关键字都会创建一个协程。
-- M（Machine）： 工作线程，在Go中称为Machine。
-- P(Processor): 处理器（Go中定义的一个摡念，不是指CPU），包含运行Go代码的必要资源，也有调度goroutine的能力。
+![img](https://img-blog.csdnimg.cn/20210317173651867.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
 
-M必须拥有P才可以执行G中的代码，P含有一个包含多个G的队列，P可以调度G交由M执行。其关系如下图所示：
+**GMP模型** 
 
-![null](http://wen.topgoer.com/uploads/gozhuanjia/images/m_274ee3af62bab4ad8f74a6753d6969cf_r.png)
+****![img](https://img-blog.csdnimg.cn/20210317174330298.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
 
-图中M是交给操作系统调度的线程，M持有一个P，P将G调度进M中执行。P同时还维护着一个包含G的队列（图中灰色部分），可以按照一定的策略将G调度到M中执行。
+其中，**Processor，它包含了运行 goroutine 的资源，如果线程想运行 goroutine，必须先获取 P，P 中还包含了可运行的 G 队列。在 Go 中，线程是运行 goroutine 的实体，调度器的功能是把可运行的 goroutine 分配到工作线程上**
 
-P的个数在程序启动时决定，默认情况下等同于CPU的核数，由于M必须持有一个P才可以运行Go代码，所以同时运行的M个数，也即线程数一般等同于CPU的个数，以达到尽可能的使用CPU而又不至于产生过多的线程切换开销。程序中可以使用`runtime.GOMAXPROCS()`设置P的个数，在某些IO密集型的场景下可以在一定程度上提高性能。
+![img](https://img-blog.csdnimg.cn/20210317174858449.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
+
+- 全局队列（Global Queue）：存放等待运行的 G。
+- P 的本地队列：同全局队列类似，存放的也是等待运行的 G，存的数量有限，不超过 256 个。新建 G’时，G’优先加入到 P 的本地队列，如果队列满了，则会把本地队列中一半的 G 移动到全局队列。
+- P 列表：所有的 P 都在程序启动时创建，并保存在数组中，最多有 GOMAXPROCS(可配置) 个。
+- M：线程想运行任务就得获取 P，从 P 的本地队列获取 G，P 队列为空时，M 也会尝试从全局队列拿一批 G 放到 P 的本地队列，或从其他 P 的本地队列偷一半放到自己 P 的本地队列。M 运行 G，G 执行之后，M 会从 P 获取下一个 G，不断重复下去。
+
+**调度器的策略：**
+
+**1. 复用线程**：避免频繁的创建、销毁线程，而是对线程的复用。
+
+1）work stealing 机制。当本线程无可运行的 G 时，尝试从其他线程绑定的 P 偷取 G，而不是销毁线程。
+
+2）hand off 机制。当本线程因为 G 进行系统调用阻塞时，线程释放绑定的 P，把 P 转移给其他空闲的线程执行。
+
+**2. 利用并行**：GOMAXPROCS 设置 P 的数量，最多有 GOMAXPROCS 个线程分布在多个 CPU 上同时运行。GOMAXPROCS 也限制了并发的程度，比如 GOMAXPROCS = 核数/2，则最多利用了一半的 CPU 核进行并行。
+
+**3. 抢占**：在 coroutine 中要等待一个协程主动让出 CPU 才执行下一个协程，在 Go 中，一个 goroutine 最多占用 CPU 10ms，防止其他 goroutine 被饿死，这就是 goroutine 不同于 coroutine 的一个地方。
+
+**4. 全局 G 队列**：在新的调度器中依然有全局 G 队列，但功能已经被弱化了，当 M 执行 work stealing 从其他 P 偷不到 G 时，它可以从全局 G 队列获取 G。
+
+**一个go func ()的调度流程：**
+
+![img](https://img-blog.csdnimg.cn/20210317175548606.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
+
+ 1、我们通过 go func () 来创建一个 goroutine；
+
+ 2、有两个存储 G 的队列，一个是局部调度器 P 的本地队列、一个是全局 G 队列。新创建的 G 会先保存在 P 的本地队列中，如果 P 的本地队列已经满了就会保存在全局的队列中；
+
+ 3、G 只能运行在 M 中，一个 M 必须持有一个 P，M 与 P 是 1：1 的关系。M 会从 P 的本地队列弹出一个可执行状态的 G 来执行，如果 P 的本地队列为空，就会想其他的 MP 组合偷取一个可执行的 G 来执行；
+
+ 4、一个 M 调度 G 执行的过程是一个循环机制；
+
+ 5、当 M 执行某一个 G 时候如果发生了 syscall 或则其余阻塞操作，M 会阻塞，如果当前有一些 G 在执行，runtime 会把这个线程 M 从 P 中摘除 (detach)，然后再创建一个新的内核线程 (如果有空闲的线程可用就复用空闲线程) 来服务于这个 P；
+
+ 6、当 M 系统调用结束时候，这个 G 会尝试获取一个空闲的 P 执行，并放入到这个 P 的本地队列。如果获取不到 P，那么这个线程 M 变成休眠状态， 加入到空闲线程中，然后这个 G 会被放入全局队列中。
 
 # 内存管理
 
@@ -468,7 +518,7 @@ Golang程序启动时会向系统申请的内存如下图所示：
 
 ![null](http://wen.topgoer.com/uploads/gozhuanjia/images/m_8aa79b32715f0ebe6e9618edd9d98383_r.png)
 
-预申请的内存划分为s**pans、bitmap、arena三部分。其中arena即为所谓的堆区，应用中需要的内存从这里分配。其中spans和bitmap是为了管理arena区而存在的。**
+预申请的内存划分为**spans、bitmap、arena三部分。其中arena即为所谓的堆区，应用中需要的内存从这里分配。其中spans和bitmap是为了管理arena区而存在的。**
 
 arena的大小为512G，为了方便管理把arena区域划分成一个个的page，每个page为8KB,一共有512GB/8KB个页；
 
@@ -514,8 +564,50 @@ Golang内存分配是个相当复杂的过程，其中还掺杂了GC的处理，
 
 逃逸场景：
 
-指针变量、栈不足、动态参数、闭包引用对象
+函数返回局部变量的指针（安全的）、栈不足、动态参数、闭包引用对象
 
 通过编译参数-gcflag=-m可以查看编译过程中的逃逸分析（ escapes to heap）
 
 ## GC
+
+最常见的垃圾回收算法有标记清除(Mark-Sweep) 和引用计数(Reference Count)，Go 语言采用的是**标记清除算法。**并在此基础上使用了**三色标记法和写屏障技术，提高了效率**。
+
+标记清除收集器是跟踪式垃圾收集器，其执行过程可以分成标记（Mark）和清除（Sweep）两个阶段：
+
+- 标记阶段 — 从根对象出发查找并标记堆中所有存活的对象；
+- 清除阶段 — 遍历堆中的全部对象，回收未被标记的垃圾对象并将回收的内存加入空闲链表。
+
+标记清除算法的一大问题是在标记期间，需要暂停程序（Stop the world，STW），标记结束之后，用户程序才可以继续执行。为了能够异步执行，减少 STW 的时间，Go 语言采用了三色标记法。
+
+三色标记算法将程序中的对象分成白色、黑色和灰色三类。
+
+- 白色：不确定对象。
+- 灰色：存活对象，子对象待处理。
+- 黑色：存活对象。
+
+标记开始时，所有对象加入白色集合（这一步需 STW ）。首先将根对象标记为灰色，加入灰色集合，垃圾搜集器取出一个灰色对象，将其标记为黑色，并将其指向的对象标记为灰色，加入灰色集合。重复这个过程，直到灰色集合为空为止，标记阶段结束。那么白色对象即可需要清理的对象，而黑色对象均为根可达的对象，不能被清理。
+
+三色标记法因为多了一个白色的状态来存放不确定对象，所以后续的标记阶段可以并发地执行。当然并发执行的代价是可能会造成一些遗漏，因为那些早先被标记为黑色的对象可能目前已经是不可达的了。所以三色标记法是一个 false negative（假阴性）的算法。
+
+三色标记法并发执行仍存在一个问题，即在 GC 过程中，对象指针发生了改变。比如下面的例子：
+
+```
+A (黑) -> B (灰) -> C (白) -> D (白)
+```
+
+正常情况下，D 对象最终会被标记为黑色，不应被回收。但在标记和用户程序并发执行过程中，用户程序删除了 C 对 D 的引用，而 A 获得了 D 的引用。标记继续进行，D 就没有机会被标记为黑色了（A 已经处理过，这一轮不会再被处理）。
+
+```
+A (黑) -> B (灰) -> C (白) 
+  ↓
+ D (白)
+```
+
+为了解决这个问题，Go 使用了内存屏障技术，它是在用户程序读取对象、创建新对象以及更新对象指针时执行的一段代码，类似于一个钩子。垃圾收集器使用了写屏障（Write Barrier）技术，当对象新增或更新时，会将其着色为灰色。这样即使与用户程序并发执行，对象的引用发生改变时，垃圾收集器也能正确处理了。
+
+**一次完整的 GC 分为四个阶段：**
+
+- 1）标记准备(Mark Setup，需 STW)，打开写屏障(Write Barrier)
+- 2）使用三色标记法标记（Marking, 并发）
+- 3）标记结束(Mark Termination，需 STW)，关闭写屏障。
+- 4）清理(Sweeping, 并发)

@@ -147,6 +147,7 @@ _s := "ABC"
 b := []byte(_s)
 fmt.Println(b) //[65 66 67]
 
+
 ```
 
 **数字类型**
@@ -196,6 +197,14 @@ copy(sliceC, sliceB)
 **map**
 
 Map 是一种无序的键值对的集合。Map 最重要的一点是通过 key 来快速检索数据，key 类似于索引，指向数据的值。 
+
+**chan**
+
+对于无缓冲的 channel，发送方将阻塞该信道，直到接收方从该信道接收到数据为止，而接收方也将阻塞该信道，直到发送方将数据发送到该信道中为止。
+
+对于有缓存的 channel，发送方在没有空插槽（缓冲区使用完）的情况下阻塞，而接收方在信道为空的情况下阻塞。
+
+
 
 # 运算符
 
@@ -268,7 +277,7 @@ func main(){
 }
 ```
 
-**main函数和init函数**
+**main()和init()**
 
 Go里面有两个保留的函数：`init`函数（能够应用于所有的`package`）和`main`函数（只能应用于`package main`）。这两个函数在定义时不能有任何的参数和返回值。虽然一个`package`里面可以写任意多个`init`函数，但这无论是对于可读性还是以后的可维护性来说，我们都强烈建议用户在一个`package`中每个文件只写一个`init`函数。
 
@@ -277,6 +286,8 @@ Go程序会自动调用`init()`和`main()`，所以你不需要在任何地方�
 程序的初始化和执行都起始于`main`包。如果`main`包还导入了其它的包，那么就会在编译时将它们依次导入。有时一个包会被多个包同时导入，那么它只会被导入一次（例如很多包可能都会用到`fmt`包，但它只会被导入一次，因为没有必要导入多次）。当一个包被导入时，如果该包还导入了其它的包，那么会先将其它包导入进来，然后再对这些包中的包级常量和变量进行初始化，接着执行`init`函数（如果有的话），依次类推。等所有被导入的包都加载完毕了，就会开始对`main`包中的包级常量和变量进行初始化，然后执行`main`包中的`init`函数（如果存在的话），最后执行`main`函数。下图详细地解释了整个执行过程：
 
 ![img](https://astaxie.gitbooks.io/build-web-application-with-golang/content/zh/images/2.3.init.png?raw=true)
+
+`init()` 函数是 Go 程序初始化的一部分。Go 程序初始化先于 main 函数，由 runtime 初始化每个导入的包，初始化顺序不是按照从上到下的导入顺序，而是按照解析的依赖关系，没有依赖的包最先初始化。每个包首先初始化包作用域的常量和变量（常量优先于变量），然后执行包的 `init()` 函数。同一个包，甚至是同一个源文件可以有多个 `init()` 函数。`init()` 函数没有入参和返回值，不能被其他函数调用，同一个包内多个 `init()` 函数的执行顺序不作保证。
 
 # 异常错误
 
@@ -579,9 +590,27 @@ func main() {
 
 > 如果一个method的receiver是T，你可以在一个*T类型的变量P上面调用这个method，而不需要* P去调用这个method
 
-所以，你不用担心你是调用的指针的method还是不是指针的method，Go知道你要做的一切，这对于有多年C/C++编程经验的同学来说，真是解决了一个很大的痛苦。
+所以，你不用担心你是调用的指针的method还是不是指针的method，Go知道你要做的一切。
 
+- 一个T类型的值可以调用为`*T`类型声明的方法，但是仅当此T的值是可寻址(addressable) 的情况下。编译器在调用指针属主方法前，会自动取此T值的地址。因为不是任何T值都是可寻址的，所以并非任何T值都能够调用为类型`*T`声明的方法。哪些值是不可寻址的呢，包括字符串中的字节；map 对象中的元素（slice 对象中的元素是可寻址的，slice的底层是数组）；常量；包级别的函数等。
+- 反过来，一个`*T`类型的值可以调用为类型T声明的方法，这是因为解引用指针总是合法的。事实上，你可以认为对于每一个为类型 T 声明的方法，编译器都会为类型`*T`自动隐式声明一个同名和同签名的方法。
 
+举一个例子，定义类型 T，并为类型 `*T` 声明一个方法 `hello()`，变量 t1 可以调用该方法，但是常量 t2 调用该方法时，会产生编译错误。
+
+```go
+type T string
+
+func (t *T) hello() {
+	fmt.Println("hello")
+}
+
+func main() {
+	var t1 T = "ABC"
+	t1.hello() // hello
+	const t2 T = "ABC"
+	t2.hello() // error: cannot call pointer method on t
+}
+```
 
 **接口**
 
@@ -707,9 +736,58 @@ func justifyType(x interface{}) {
 }
 ```
 
+**空struct**
+
+使用空结构体 struct{} 可以节省内存，一般作为占位符使用，表明这里并不需要一个值。
+
+```go
+fmt.Println(unsafe.Sizeof(struct{}{})) // 0
+// Set 比如使用 map 表示集合时，只关注 key，value 可以使用 struct{} 作为占位符。如果使用其他类型作为占位符，例如 int，bool，不仅浪费了内存，而且容易引起歧义。
+type Set map[string]struct{}
+
+func testSet() {
+   set := make(Set)
+   keys := []string{"A", "A", "b", "A"}
+   for _, v := range keys {
+      set[v] = struct{}{}
+   }
+   fmt.Println(len(set))
+   if _, ok := set["A"]; ok {
+      fmt.Printf("Key A exist")
+   }
+}
+//使用信道(channel)控制并发时，我们只是需要一个信号，但并不需要传递值，这个时候，也可以使用 struct{} 代替。
+func main() {
+	ch := make(chan struct{}, 1)
+	go func() {
+		<-ch
+		// do something
+	}()
+	ch <- struct{}{}
+	// ...
+}
+
+//声明只包含方法的结构体。
+type Lamp struct{}
+
+func (l Lamp) On() {
+        println("On")
+
+}
+func (l Lamp) Off() {
+        println("Off")
+}
+```
+
 **反射**
 
-反射就是能检查程序在运行时的状态。我们一般用到的包是reflect包。。。
+> 参考：https://blog.csdn.net/u012291393/article/details/78378386
+
+值类型查看类型及值，修改
+
+struct查看类型及字段，调用函数，修改字段值
+
+匿名字段继承
 
 # 常用库
 
@@ -743,6 +821,9 @@ fmt.Printf(s2)
 //Errorf函数根据format参数生成格式化字符串并返回一个包含该字符串的错误。
 err := fmt.Errorf("这是一个错误")
 _ = err
+// %v 和 %+v 都可以用来打印 struct 的值，区别在于 %v 仅打印各个字段的值，%+v 还会打印各个字段的名称。
+// %s %d %p %T....
+
 ```
 
 **IO**
