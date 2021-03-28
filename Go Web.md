@@ -153,5 +153,15 @@ redis的备份也分为两种：热备份和冷备份，redis也支持master/sla
 
 **Casbin** 
 
+Oauth和Token
+
+Redis
+
+Mysql
+
+Kafka
+
+
+
 
 

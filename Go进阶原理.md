@@ -1,4 +1,4 @@
-# 数据结构原理
+# 数据原理
 
 ## chan
 
@@ -126,48 +126,29 @@ func makechan(t *chantype, size int) *hchan {
 
 # 网络编程
 
-**TCP IP**
-
-tcp ip http协议。。。
+## Socket
 
 socket图解：
 
 ![socket图解](http://www.topgoer.com/static/6.1/3.png) 
 
-**REST**
+。。。
+
+## REST
 
 。。。
 
-**RPC**
+## RPC
 
 。。。
 
-**WebSocket**
+## WebSocket
 
 WebSocket是一种在单个TCP连接上进行全双工通信的协议，使得客户端和服务器之间的数据交换变得更加简单，允许服务端主动向客户端推送数据，浏览器和服务器只需要完成一次握手，两者之间就直接可以创建持久性的连接，并进行双向数据传输。需要安装第三方包： github.com/gorilla/websocket。
 
 > 应用：http://www.topgoer.com/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/WebSocket%E7%BC%96%E7%A8%8B.html 多人在线聊天
 >
 > 有必要去搞搞的。。。
-
-**TCP粘包**
-
-客户端分10次发送的数据，在服务端并没有成功的输出10次，而是多条数据“粘”到了一起。为什么会出现粘包
-
-主要原因就是tcp数据传递模式是流模式，在保持长连接的时候可以进行多次的收和发。“粘包”可发生在发送端也可发生在接收端：
-
-```
-    1.由Nagle算法造成的发送端的粘包：Nagle算法是一种改善网络传输效率的算法。简单来说就是当我们提交一段数据给TCP发送时，TCP并不立刻发送此段数据，而是等待一小段时间看看在等待期间是否还有要发送的数据，若有则会一次把这两段数据发送出去。
-    2.接收端接收不及时造成的接收端粘包：TCP会把接收到的数据存在自己的缓冲区中，然后通知应用层取数据。当应用层由于某些原因不能及时的把TCP的数据取出来，就会造成TCP缓冲区中存放了几段数据。
-```
-
-解决办法：
-
-出现”粘包”的关键在于接收方不确定将要传输的数据包的大小，因此我们可以对数据包进行封包和拆包的操作。
-
-封包：封包就是给一段数据加上包头，这样一来数据包就分为包头和包体两部分内容了(过滤非法包时封包会加入”包尾”内容)。包头部分的长度是固定的，并且它存储了包体的长度，根据包头长度固定以及包头中含有包体长度的变量就能正确的拆分出一个完整的数据包。
-
-> 参考：http://www.topgoer.com/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/socket%E7%BC%96%E7%A8%8B/TCP%E9%BB%8F%E5%8C%85.html
 
 
 
@@ -439,11 +420,58 @@ type RWMutex struct {
 
 ## sync.Once
 
-单例模式
+单例模式。。。
 
 ## sync.Pool
 
-。。。
+sync Pool是用来保存和复用临时对象，以减少内存分配，降低CG压力。，里面的对象不是固定的。sync.Pool可以安全被多个线程同时使用，保证线程安全。sync.Pool中保存的任何项都可能随时不做通知的释放掉，所以不适合用于像socket长连接或数据库连接池。sync.Pool主要用途是增加临时对象的重用率，减少GC负担。
+
+```go
+func (s *Student) String() string {
+   return s.name
+}
+
+func testPool() {
+   studentPool := sync.Pool{
+      New: func() interface{} {
+         return &Student{"abc"}
+      }}
+
+   for i:=0;i<100000;i++{
+      stud := studentPool.Get().(*Student)
+      fmt.Printf("%p %v\n", stud, stud)
+   }
+}
+//对比
+type C1 struct {
+	B1 [10000000]int
+}
+
+func usePool() {
+	pool := sync.Pool{New:
+	func() interface{} {
+		return new(C1)
+	}}
+	startTime := time.Now()
+	for i := 0; i < 10000; i++ {
+		c := pool.Get().(*C1)
+		c.B1[0] = 1
+		pool.Put(c)//需要加上
+	}
+	fmt.Println("Used time : ", time.Since(startTime))
+}
+
+func standard() {
+	startTime := time.Now()
+	for i := 0; i < 10000; i++ {
+		var c C1
+		c.B1[0] = 1
+	}
+	fmt.Println("Used time : ", time.Since(startTime))
+}
+//standard Used time :  2m36.8892607s
+//usePool Used time :  70.8105ms
+```
 
 
 
@@ -611,3 +639,13 @@ A (黑) -> B (灰) -> C (白)
 - 2）使用三色标记法标记（Marking, 并发）
 - 3）标记结束(Mark Termination，需 STW)，关闭写屏障。
 - 4）清理(Sweeping, 并发)
+
+
+
+# 注意点
+
+> 参考：
+>
+> https://blog.csdn.net/itcastcpp/article/details/80462619
+>
+> https://blog.csdn.net/zhaotianyu950323/article/details/99999600?spm=1001.2014.3001.5501
