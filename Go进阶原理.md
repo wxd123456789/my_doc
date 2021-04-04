@@ -1,4 +1,4 @@
-# 数据原理
+# 数据结构
 
 ## chan
 
@@ -147,10 +147,6 @@ socket图解：
 WebSocket是一种在单个TCP连接上进行全双工通信的协议，使得客户端和服务器之间的数据交换变得更加简单，允许服务端主动向客户端推送数据，浏览器和服务器只需要完成一次握手，两者之间就直接可以创建持久性的连接，并进行双向数据传输。需要安装第三方包： github.com/gorilla/websocket。
 
 > 应用：http://www.topgoer.com/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/WebSocket%E7%BC%96%E7%A8%8B.html 多人在线聊天
->
-> 有必要去搞搞的。。。
-
-
 
 # 并发编程
 
@@ -222,74 +218,9 @@ OS线程（操作系统线程）一般都有固定的栈内存（通常为2MB）
     }
 ```
 
-## WaitGroup 
+## sync
 
-其数据结构：
-
-```
-type WaitGroup struct {
-    state1 [3]uint32
-}
-```
-
-state1是个长度为3的数组，其中包含了state和一个信号量，而state实际上是两个计数器：
-
-- counter： 当前还未执行结束的goroutine计数器
-- waiter count: 等待goroutine-group结束的goroutine数量，即有多少个等候者
-- semaphore: 信号量
-
-信号量是Unix系统提供的一种保护共享资源的机制，用于防止多个线程同时访问某个资源。可简单理解为信号量为一个数值：
-
-- 当信号量>0时，表示资源可用，获取信号量时系统自动将信号量减1；
-- 当信号量==0时，表示资源暂不可用，获取信号量时，当前线程会进入睡眠，当信号量为正时被唤醒；
-
-考虑到字节是否对齐，三者出现的位置不同，为简单起见，依照字节已对齐情况下，三者在内存中的位置如下所示：
-
-![null](http://wen.topgoer.com/uploads/gozhuanjia/images/m_b68f98a52c940a8c94a7c39f1f56a901_r.png)
-
-WaitGroup对外提供三个接口：
-
-- Add(delta int): 将delta值加到counter中
-- Wait()： waiter递增1，并阻塞等待信号量semaphore
-- Done()： counter递减1，按照waiter数值释放相应次数信号量
-
-```go
-var wg sync.WaitGroup
-
-func hello(i int) {
-    defer wg.Done() // goroutine结束就登记-1
-    fmt.Println("Hello Goroutine!", i)
-}
-func main() {
-    for i := 0; i < 10; i++ {
-        wg.Add(1) // 启动一个goroutine就登记+1
-        go hello(i)
-    }
-    wg.Wait() // 等待所有登记的goroutine都结束
-}
-```
-
-## Context
-
-> 引用：https://www.jianshu.com/p/6def5063c1eb
-
-Golang context是Golang应用开发常用的并发控制技术，它与WaitGroup最大的不同点是context对于派生goroutine有更强的控制力，它可以控制多级的goroutine。context翻译成中文是”上下文”，即它可以控制一组呈树状结构的goroutine，每个goroutine拥有相同的上下文。context用于控制goroutine的生命周期。当一个计算任务被goroutine承接了之后，由于某种原因（超时，或者强制退出）我们希望中止这个goroutine的计算任务，那么就用得到这个Context了。 
-
-context实际上只定义了接口，凡是实现该接口的类都可称为是一种context，官方包中实现了几个常用的context，分别可用于不同的场景。 Context仅仅是一个接口定义，根据实现的不同，可以衍生出不同的context类型：
-
-- cancelCtx实现了Context接口，通过WithCancel()创建cancelCtx实例；
-- timerCtx实现了Context接口，通过WithDeadline()和WithTimeout()创建timerCtx实例；
-- valueCtx实现了Context接口，通过WithValue()创建valueCtx实例；
-
-应用场景：
-
-- 请求的取消，比如一个协程失败强制退出另外几个协程；
-- 请求的超时
-- 在http请求中传递上下文
-
-
-
-## Mutex
+### Mutex
 
 > 引用：http://wen.topgoer.com/docs/gozhuanjia/gozhuanjiamutex
 
@@ -391,7 +322,7 @@ Woken状态用于加锁和解锁过程的通信，举个例子，同一时刻，
 
 使用defer避免死锁，加锁后立即使用defer对其解锁，可以有效的避免死锁。加锁和解锁最好出现在同一个层次的代码块中，比如同一个函数。重复解锁会引起panic，应避免这种操作的可能性。
 
-## RWMutex
+### RWMutex
 
 前面我们聊了互斥锁Mutex，所谓读写锁RWMutex，完整的表述应该是读写互斥锁，可以说是Mutex的一个改进版，在某些场景下可以发挥更加灵活的控制能力，比如：读取数据频率远远大于写数据频率的场景。
 
@@ -418,11 +349,76 @@ type RWMutex struct {
 
 由以上数据结构可见，读写锁内部仍有一个互斥锁，用于将两个写操作隔离开来，其他的几个都用于隔离读操作和写操作。
 
-## sync.Once
+### WaitGroup
+
+其数据结构：
+
+```
+type WaitGroup struct {
+    state1 [3]uint32
+}
+```
+
+state1是个长度为3的数组，其中包含了state和一个信号量，而state实际上是两个计数器：
+
+- counter： 当前还未执行结束的goroutine计数器
+- waiter count: 等待goroutine-group结束的goroutine数量，即有多少个等候者
+- semaphore: 信号量
+
+信号量是Unix系统提供的一种保护共享资源的机制，用于防止多个线程同时访问某个资源。可简单理解为信号量为一个数值：
+
+- 当信号量>0时，表示资源可用，获取信号量时系统自动将信号量减1；
+- 当信号量==0时，表示资源暂不可用，获取信号量时，当前线程会进入睡眠，当信号量为正时被唤醒；
+
+考虑到字节是否对齐，三者出现的位置不同，为简单起见，依照字节已对齐情况下，三者在内存中的位置如下所示：
+
+![null](http://wen.topgoer.com/uploads/gozhuanjia/images/m_b68f98a52c940a8c94a7c39f1f56a901_r.png)
+
+WaitGroup对外提供三个接口：
+
+- Add(delta int): 将delta值加到counter中
+- Wait()： waiter递增1，并阻塞等待信号量semaphore
+- Done()： counter递减1，按照waiter数值释放相应次数信号量
+
+```go
+var wg sync.WaitGroup
+
+func hello(i int) {
+    defer wg.Done() // goroutine结束就登记-1
+    fmt.Println("Hello Goroutine!", i)
+}
+func main() {
+    for i := 0; i < 10; i++ {
+        wg.Add(1) // 启动一个goroutine就登记+1
+        go hello(i)
+    }
+    wg.Wait() // 等待所有登记的goroutine都结束
+}
+```
+
+### Context
+
+> 引用：https://www.jianshu.com/p/6def5063c1eb
+
+Golang context是Golang应用开发常用的并发控制技术，它与WaitGroup最大的不同点是context对于派生goroutine有更强的控制力，它可以控制多级的goroutine。context翻译成中文是”上下文”，即它可以控制一组呈树状结构的goroutine，每个goroutine拥有相同的上下文。context用于控制goroutine的生命周期。当一个计算任务被goroutine承接了之后，由于某种原因（超时，或者强制退出）我们希望中止这个goroutine的计算任务，那么就用得到这个Context了。 
+
+context实际上只定义了接口，凡是实现该接口的类都可称为是一种context，官方包中实现了几个常用的context，分别可用于不同的场景。 Context仅仅是一个接口定义，根据实现的不同，可以衍生出不同的context类型：
+
+- cancelCtx实现了Context接口，通过WithCancel()创建cancelCtx实例；
+- timerCtx实现了Context接口，通过WithDeadline()和WithTimeout()创建timerCtx实例；
+- valueCtx实现了Context接口，通过WithValue()创建valueCtx实例；
+
+应用场景：
+
+- 请求的取消，比如一个协程失败强制退出另外几个协程；
+- 请求的超时
+- 在http请求中传递上下文
+
+### Once
 
 单例模式。。。
 
-## sync.Pool
+### Pool
 
 sync Pool是用来保存和复用临时对象，以减少内存分配，降低CG压力。，里面的对象不是固定的。sync.Pool可以安全被多个线程同时使用，保证线程安全。sync.Pool中保存的任何项都可能随时不做通知的释放掉，所以不适合用于像socket长连接或数据库连接池。sync.Pool主要用途是增加临时对象的重用率，减少GC负担。
 
@@ -473,29 +469,139 @@ func standard() {
 //usePool Used time :  70.8105ms
 ```
 
+## Atomic
+
+原子包。。。
+
+# 调度模型
+
+> https://blog.csdn.net/chushoufengli/article/details/114940228
+>
+> https://draveness.me/golang/docs/part3-runtime/ch06-concurrency/golang-goroutine/
+
+Go 语言的调度器通过使用与 CPU 数量相等的线程减少线程频繁切换的内存开销，同时在每一个线程上执行额外开销更低的 Goroutine 来降低操作系统和硬件的负载。 运行时 G-M-P 模型中引入的处理器 P 是线程和 Goroutine 的中间层 ，P的任务队列。
+
+## GMP模型
+
+![img](https://img-blog.csdnimg.cn/20210317174330298.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
+
+- G — 表示 Goroutine，它是一个待执行的任务；
+- M — 表示操作系统的线程，它由操作系统的调度器调度和管理；
+- P — 表示处理器，它可以被看做运行在线程上的本地调度器；
+
+**Goroutine**
+
+Goroutine 可能处于以下 9 种状态：
+
+| 状态          | 描述                                                         |
+| ------------- | ------------------------------------------------------------ |
+| `_Gidle`      | 刚刚被分配并且还没有被初始化                                 |
+| `_Grunnable`  | 没有执行代码，没有栈的所有权，存储在运行队列中               |
+| `_Grunning`   | 可以执行代码，拥有栈的所有权，被赋予了内核线程 M 和处理器 P  |
+| `_Gsyscall`   | 正在执行系统调用，拥有栈的所有权，没有执行用户代码，被赋予了内核线程 M 但是不在运行队列上 |
+| `_Gwaiting`   | 由于运行时而被阻塞，没有执行用户代码并且不在运行队列上，但是可能存在于 Channel 的等待队列上 |
+| `_Gdead`      | 没有被使用，没有执行代码，可能有分配的栈                     |
+| `_Gcopystack` | 栈正在被拷贝，没有执行代码，不在运行队列上                   |
+| `_Gpreempted` | 由于抢占而被阻塞，没有执行用户代码并且不在运行队列上，等待唤醒 |
+| `_Gscan`      | GC 正在扫描栈空间，没有执行代码，可以与其他状态同时存在      |
+
+可以将这些不同的状态聚合成三种：等待中、可运行、运行中，运行期间会在这三种状态来回切换：
+
+- 等待中：Goroutine 正在等待某些条件满足，例如：系统调用结束等，包括 `_Gwaiting`、`_Gsyscall` 和 `_Gpreempted` 几个状态；
+- 可运行：Goroutine 已经准备就绪，可以在线程运行，如果当前程序中有非常多的 Goroutine，每个 Goroutine 就可能会等待更多的时间，即 `_Grunnable`；
+- 运行中：Goroutine 正在某个线程上运行，即 `_Grunning`；
+
+**M**
+
+Go 语言并发模型中的 M 是操作系统线程。调度器最多可以创建 10000 个线程，但是其中大多数的线程都不会执行用户代码（可能陷入系统调用），最多只会有 GOMAXPROCS 个活跃线程能够正常运行。 
+
+在默认情况下，一个四核机器会创建四个活跃的操作系统线程，每一个线程都对应一个运行时中的 runtime.m 结构体。 Go 的默认设置，也就是线程数等于 CPU 数，默认的设置不会频繁触发操作系统的线程调度和上下文切换，所有的调度都会发生在用户态，由 Go 语言调度器触发，能够减少很多额外开销。 
+
+。。。
+
+**P处理器**
+
+调度器中的处理器 P 是线程和 Goroutine 的中间层，它能提供线程需要的上下文环境，也会负责调度线程上的等待队列，通过处理器 P 的调度，每一个内核线程都能够执行多个 Goroutine，它能在 Goroutine 进行一些 I/O 操作时及时让出计算资源，提高线程的利用率。因为调度器在启动时就会创建 GOMAXPROCS 个处理器，所以 Go 语言程序的处理器数量一定会等于 GOMAXPROCS，这些处理器会绑定到不同的内核线程上。
+
+runtime.p 是处理器的运行时表示，作为调度器的内部实现，它包含的字段也非常多，其中包括与性能追踪、垃圾回收和计时器相关的字段，主要关注处理器中的线程和运行队列：
+
+```go
+type p struct {
+	m           muintptr
+	runqhead uint32
+	runqtail uint32
+	runq     [256]guintptr//处理器持有的运行队列
+	runnext guintptr
+	...
+}
+```
+
+ 处理器的状态如下：
+
+| 状态        | 描述                                                         |
+| ----------- | ------------------------------------------------------------ |
+| `_Pidle`    | 处理器没有运行用户代码或者调度器，被空闲队列或者改变其状态的结构持有，运行队列为空 |
+| `_Prunning` | 被线程 M 持有，并且正在执行用户代码或者调度器                |
+| `_Psyscall` | 没有执行用户代码，当前线程陷入系统调用                       |
+| `_Pgcstop`  | 被线程 M 持有，当前处理器由于垃圾回收被停止                  |
+| `_Pdead`    | 当前处理器已经不被使用                                       |
+
+通过分析处理器 P 的状态，我们能够对处理器的工作过程有一些简单理解，例如处理器在执行用户代码时会处于 `_Prunning` 状态，在当前线程执行 I/O 操作时会陷入 `_Psyscall` 状态。
+
+## 调度原理
+
+1、调度器初始化
+
+在调度器初始函数执行的过程中会将 maxmcount 设置成 10000，这也就是一个 Go 语言程序能够创建的最大线程数，虽然最多可以创建 10000 个线程，但是可以同时运行的线程还是由 GOMAXPROCS 变量控制。我们从环境变量 GOMAXPROCS 获取了程序能够同时运行的最大处理器数之后就会调用 runtime.procresize 更新程序中处理器的数量，在这时整个程序不会执行任何用户 Goroutine，调度器也会进入锁定状态，runtime.procresize 的执行过程如下：
+
+1. 如果全局变量 allp 切片中的处理器数量少于期望数量，会对切片进行扩容；
+2. 使用 new 创建新的处理器结构体并调用 runtime.p.init 初始化刚刚扩容的处理器；
+3. 通过指针将线程 m0 和处理器 allp[0] 绑定到一起；
+4. 调用 runtime.p.destroy 释放不再使用的处理器结构；
+5. 通过截断改变全局变量 allp 的长度保证与期望处理器数量相等；
+6. 将除 allp[0] 之外的处理器 P 全部设置成 _Pidle 并加入到全局的空闲队列中；
+
+2、创建goroutine
+
+获取 Goroutine 结构体的三种方法
+
+1. 当处理器的 Goroutine 列表为空时，会将调度器持有的空闲 Goroutine 转移到当前处理器上，直到 gFree 列表中的 Goroutine 数量达到 32；
+2. 当处理器的 Goroutine 数量充足时，会从列表头部返回一个新的 Goroutine；
+3. 当调度器的 gFree 和处理器的 gFree 列表都不存在结构体时，运行时会调用 runtime.malg 初始化新的 runtime.g 结构
+
+将 Goroutine 放到运行队列上，这既可能是全局的运行队列，也可能是处理器本地的运行队列。Go 语言有两个运行队列，其中一个是处理器本地的运行队列，另一个是调度器持有的全局运行队列，只有在本地运行队列没有剩余空间时才会使用全局队列。 
+
+3、调度循环
+
+调度器启动之后，Go 语言运行时会调用 runtime.mstart 以及 runtime.mstart1，前者会初始化 g0 的 stackguard0 和 stackguard1 字段，后者会初始化线程并调用 runtime.schedule 进入调度循环。获取可运行的 Goroutine：
+
+1. 从本地运行队列、全局运行队列中查找；
+2. 从网络轮询器中查找是否有 Goroutine 等待运行；
+3. 通过 runtime.runqsteal 尝试从其他随机的处理器中窃取待运行的 Goroutine，该函数还可能窃取处理器的计时器；
+
+Go 语言中的运行时调度循环会从 runtime.schedule 开始，最终又回到 runtime.schedule，我们可以认为调度循环永远都不会返回。 
+
+4、触发调度
+
+运行时触发调度的几个路径：
+
+- 主动挂起 — runtime.gopark -> runtime.park_m 
+
+  该函数会将当前 Goroutine 暂停，被暂停的任务不会放回运行队列 
+
+- 系统调用 — [`runtime.exitsyscall`](https://draveness.me/golang/tree/runtime.exitsyscall) -> [`runtime.exitsyscall0`](https://draveness.me/golang/tree/runtime.exitsyscall0)
+
+- 协作式调度 — runtime.Gosched -> runtime.gosched_m -> runtime.goschedImpl
+
+  runtime.Gosched 函数会主动让出处理器，允许其他 Goroutine 运行。该函数无法挂起 Goroutine，调度器会在可能会将当前 Goroutine 调度到其他线程上 
+
+- 系统监控 — runtime.sysmon -> runtime.retake -> runtime.preemptone
+
+5、线程管理
 
 
-# 调度器
 
-> 引用：https://blog.csdn.net/chushoufengli/article/details/114940228
-
-一个线程分为 内核态线程 和 用户态线程，在线程切换时，前者比后者需要更多的资源。而一个 “用户态线程” 必须要绑定一个 “内核态线程”，但是 CPU 并不知道有 “用户态线程” 的存在，它只知道它运行的是一个 “内核态线程”(Linux 的 PCB 进程控制块)。
-
-**线程-协程-GMP的关系**
-
-thread，线程，分为内核态和用户态。
-
-用户态线程，即coroutine。goroutine是golang里的coroutine。
-
-cpu通过分配cpu时间片直接调度内核级线程thread，thread和goroutine多对多绑定，协程调度器使用GMP模型。
-
-![img](https://img-blog.csdnimg.cn/20210317173651867.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
-
-**GMP模型** 
-
-****![img](https://img-blog.csdnimg.cn/20210317174330298.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
-
-其中，**Processor，它包含了运行 goroutine 的资源，如果线程想运行 goroutine，必须先获取 P，P 中还包含了可运行的 G 队列。在 Go 中，线程是运行 goroutine 的实体，调度器的功能是把可运行的 goroutine 分配到工作线程上**
+**调度器的策略**
 
 ![img](https://img-blog.csdnimg.cn/20210317174858449.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
 
@@ -503,8 +609,6 @@ cpu通过分配cpu时间片直接调度内核级线程thread，thread和goroutin
 - P 的本地队列：同全局队列类似，存放的也是等待运行的 G，存的数量有限，不超过 256 个。新建 G’时，G’优先加入到 P 的本地队列，如果队列满了，则会把本地队列中一半的 G 移动到全局队列。
 - P 列表：所有的 P 都在程序启动时创建，并保存在数组中，最多有 GOMAXPROCS(可配置) 个。
 - M：线程想运行任务就得获取 P，从 P 的本地队列获取 G，P 队列为空时，M 也会尝试从全局队列拿一批 G 放到 P 的本地队列，或从其他 P 的本地队列偷一半放到自己 P 的本地队列。M 运行 G，G 执行之后，M 会从 P 获取下一个 G，不断重复下去。
-
-**调度器的策略：**
 
 **1. 复用线程**：避免频繁的创建、销毁线程，而是对线程的复用。
 
@@ -518,7 +622,9 @@ cpu通过分配cpu时间片直接调度内核级线程thread，thread和goroutin
 
 **4. 全局 G 队列**：在新的调度器中依然有全局 G 队列，但功能已经被弱化了，当 M 执行 work stealing 从其他 P 偷不到 G 时，它可以从全局 G 队列获取 G。
 
-**一个go func ()的调度流程：**
+**调度流程**
+
+一个go func ()的调度流程如下：
 
 ![img](https://img-blog.csdnimg.cn/20210317175548606.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NodXNob3VmZW5nbGk=,size_16,color_FFFFFF,t_70)
 
@@ -533,6 +639,48 @@ cpu通过分配cpu时间片直接调度内核级线程thread，thread和goroutin
  5、当 M 执行某一个 G 时候如果发生了 syscall 或则其余阻塞操作，M 会阻塞，如果当前有一些 G 在执行，runtime 会把这个线程 M 从 P 中摘除 (detach)，然后再创建一个新的内核线程 (如果有空闲的线程可用就复用空闲线程) 来服务于这个 P；
 
  6、当 M 系统调用结束时候，这个 G 会尝试获取一个空闲的 P 执行，并放入到这个 P 的本地队列。如果获取不到 P，那么这个线程 M 变成休眠状态， 加入到空闲线程中，然后这个 G 会被放入全局队列中。
+
+# 网络轮询器
+
+大部分的服务都是 I/O 密集型的，应用程序会花费大量时间等待 I/O 操作的完成。网络轮询器是 Go 语言运行时用来处理 I/O 操作的关键组件，它使用了操作系统提供的 I/O 多路复用机制增强程序的并发处理能力。 
+
+**IO模型**
+
+1、阻塞 I/O 
+
+阻塞 I/O 是最常见的 I/O 模型，在默认情况下，当我们通过 read 或者 write 等系统调用读写文件或者网络时，应用程序会被阻塞。当我们执行 read 系统调用时，应用程序会从用户态陷入内核态，内核会检查文件描述符是否可读；当文件描述符中存在数据时，操作系统内核会将准备好的数据拷贝给应用程序并交回控制权。
+
+2、非阻塞 I/O
+
+当进程把一个文件描述符设置成非阻塞时，执行 read 和 write 等 I/O 操作会立刻返回。当我们将文件描述符修改成非阻塞后，读写文件会经历以下流程：第一次从文件描述符中读取数据会触发系统调用并返回 EAGAIN 错误，EAGAIN 意味着该文件描述符还在等待缓冲区中的数据；随后，应用程序会不断轮询调用 read 直到它的返回值大于 0，这时应用程序就可以对读取操作系统缓冲区中的数据并进行操作。进程使用非阻塞的 I/O 操作时，可以在等待过程中执行其他任务，提高 CPU 的利用率。
+
+3、I/O 多路复用 
+
+I/O 多路复用被用来处理同一个事件循环中的多个 I/O 事件。I/O 多路复用需要使用特定的系统调用，最常见的系统调用是 select，该函数可以同时监听最多 1024 个文件描述符例如socket的可读或者可写状态。除了标准的 select 之外，操作系统中还提供了一个比较相似的 poll 函数，它使用链表存储文件描述符，摆脱了 1024 的数量上限。多路复用函数会阻塞的监听一组文件描述符，当文件描述符的状态转变为可读或者可写时，select 会返回可读或者可写事件的个数，应用程序可以在输入的文件描述符中查找哪些可读或者可写，然后执行相应的操作。I/O 多路复用模型是效率较高的 I/O 模型，它可以同时阻塞监听了一组文件描述符的状态。很多高性能的服务和应用程序都会使用这一模型来处理 I/O 操作，例如：Redis 和 Nginx 等。
+
+**网络轮询器模型**
+
+Go 语言在网络轮询器中使用 I/O 多路复用模型处理 I/O 操作，但是他没有选择最常见的系统调用 select2。虽然 select 也可以提供 I/O 多路复用的能力，但是使用它有比较多的限制：
+
+- 监听能力有限 — 最多只能监听 1024 个文件描述符；
+- 内存拷贝开销大 — 需要维护一个较大的数据结构存储文件描述符，该结构需要拷贝到内核中；
+- 时间复杂度 O(n)O(n) — 返回准备就绪的事件个数后，需要遍历所有的文件描述符；
+
+为了提高 I/O 多路复用的性能，不同的操作系统也都实现了自己的 I/O 多路复用函数，例如：epoll、kqueue 和 evport 等。Go 语言为了提高在不同操作系统上的 I/O 操作性能，使用平台特定的函数实现了多个版本的网络轮询模块。这些模块在不同平台上实现了相同的功能，构成了一个常见的树形结构。编译器在编译 Go 语言程序时，会根据目标平台选择树中特定的分支进行编译。如果目标平台是 Linux，那么就会根据文件中的 // +build linux 编译指令选择 src/runtime/netpoll_epoll.go 并使用 epoll 函数处理用户的 I/O 操作。 
+
+**总结**
+
+网络轮询器实际上是对 I/O 多路复用技术的封装。
+
+运行时的调度器和系统调用都会通过 runtime.netpoll 与网络轮询器交换消息，获取待执行的 Goroutine 列表，并将待执行的 Goroutine 加入运行队列等待处理。所有的文件 I/O、网络 I/O 和计时器都是由网络轮询器管理的，它是 Go 语言运行时重要的组件。
+
+# 系统监控
+
+Go 语言的系统监控也起到了很重要的作用，它在内部启动了一个不会中止的循环，在循环的内部会轮询网络、抢占长期运行或者处于系统调用的 Goroutine 以及触发垃圾回收，通过这些行为，它能够让系统的运行状态变得更健康。 
+
+运行时通过系统监控来触发线程的抢占、网络的轮询和垃圾回收，保证 Go 语言运行时的可用性。系统监控能够很好地解决尾延迟的问题，减少调度器调度 Goroutine 的饥饿问题并保证计时器在尽可能准确的时间触发。 
+
+。。。
 
 # 内存管理
 
@@ -640,12 +788,13 @@ A (黑) -> B (灰) -> C (白)
 - 3）标记结束(Mark Termination，需 STW)，关闭写屏障。
 - 4）清理(Sweeping, 并发)
 
+# 源码解读
 
+## http
 
-# 注意点
+。。。
 
-> 参考：
->
-> https://blog.csdn.net/itcastcpp/article/details/80462619
->
-> https://blog.csdn.net/zhaotianyu950323/article/details/99999600?spm=1001.2014.3001.5501
+## sql
+
+连接池
+
