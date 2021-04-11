@@ -12,6 +12,8 @@
 
 在设计数据库结构的时候，要尽量遵守三范式，如果不遵守，必须有足够的理由。比如性能。事实上我们经常会为了性能而妥协数据库的设计。
 
+设计表的原则。。。
+
 **SQL语句分类**
 
 数据定义语言DDL（Data Ddefinition Language）CREATE，DROP，ALTER。主要为以上操作 即对逻辑结构等有操作的，其中包括表结构，视图和索引。
@@ -1344,9 +1346,3 @@ class JDBCTest {
             rs = stmt.executeQuery(pstmtSql);
 ...
 ```
-
-
-
-# 参考
-
-https://thinkwon.blog.csdn.net/article/details/104778621
