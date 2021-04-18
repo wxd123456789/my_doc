@@ -1,4 +1,4 @@
-# 基本概念
+# 基础
 
 **socket**
 
@@ -10,13 +10,19 @@
 
 
 
-# 安全与加密
+# 关键点
+
+### 路由
+
+### 缓存
+
+### 中间件
+
+### 安全与加密
 
 。。。
 
-
-
-# 备份恢复
+### 备份恢复
 
 项目中的备份恢复的文件，流程？？？？容灾倒换的流程？？？？
 
@@ -143,13 +149,11 @@ redis的备份也分为两种：热备份和冷备份，redis也支持master/sla
 
 
 
-# 开发web框架
+# gin
 
 ![img](https://astaxie.gitbooks.io/build-web-application-with-golang/content/zh/images/navi13.png?raw=true) 
 
-
-
-# 集成组件
+### 集成
 
 **Casbin** 
 
