@@ -160,7 +160,36 @@ dict结构，主要key是其集合元素，而value就是对应分值，而zkipl
 
 ![preview](https://pic1.zhimg.com/v2-d806854cece47a5d64d0fc61ad925134_r.jpg) 
 
-#  **redis过期key处理**
+# 并发控制
+
+乐观锁：
+redis乐观锁, 即CAS(check-and-set)机制, 客户端A在修改key之前先监控key, 如果key被其他客户端修改, 那么客户端A的修改就会失败, 返回 nil. 注意: 客户端A的修改要与事务一起使用，即watch和事务配合使用。
+
+```bash
+127.0.0.1:6379> set mykey 123
+OK
+127.0.0.1:6379> watch mykey
+OK
+127.0.0.1:6379> multi
+OK
+127.0.0.1:6379> set mykey 789
+QUEUED
+127.0.0.1:6379> exec
+(nil)
+127.0.0.1:6379> get mykey
+"11111"
+## 其他的客户端在修改 set mykey 11111
+```
+
+分布式锁（悲观锁）：
+客户端在读写redis之前必须先从redis获取锁, 只有获取到锁的客户端才能读写redis, 而其他没有获取到锁的客户端, 会不断地去尝试获取锁。
+
+lua脚本：
+https://felord.blog.csdn.net/article/details/109140542
+Lua 脚本在 Redis 中是以原子方式执行的，**在 Redis 服务器执行EVAL命令时，在命令执行完毕并向调用者返回结果之前，只会执行当前命令指定的 Lua 脚本包含的所有逻辑，其它客户端发送的命令将被阻塞，直到EVAL命令执行完毕为止**。因此 LUA 脚本不宜编写一些过于复杂了逻辑，必须尽量保证 Lua 脚本的效率，否则会影响其它客户端。
+
+
+#  redis过期key处理
 
 https://blog.csdn.net/shuizimuzhonglingf/article/details/102782014
 https://zhuanlan.zhihu.com/p/86531660
@@ -383,6 +412,40 @@ https://blog.csdn.net/qq_36236890/article/details/81174504
 5、队列中的消息塞满了，并设置了过期时间导致过期失效，消息丢失
 
 重跑业务生成消息塞到队列中，再消费。
+
+
+
+## 秒杀系统设计
+
+https://blog.csdn.net/qq_35190492/article/details/103105780
+
+注意点：高并发 几十万的qps、超卖、恶意请求、熔断降级限流
+
+设计：
+
+1. 微服务架构，单独的秒杀服务，对应单独的秒杀库；
+
+2. 前端对请求的url加密，服务端对通过解密的url的请求才放行；
+
+3. redis搞个集群，单机redis能抗住7-8万的qps，搞个20-30十个；
+
+4. Nginx作为代理服务器，Tomcat只能顶几百的并发，一台服务几百，那就多搞点，在秒杀的时候多租点流量机；
+
+5. Nginx拦截请求，一般单个用户请求次数太夸张，不像人为的请求在网关那一层就得拦截掉了 ；
+
+   ![img](https://tva1.sinaimg.cn/large/006y8mN6ly1g8yylq6f3mj30vs0hyq41.jpg) 
+
+6. 前端限流：一般秒杀都是点击一下或者两下然后几秒之后才可以继续点击，这也是保护服务器的一种手段；
+
+7. 后端限流：秒杀的时候肯定是涉及到后续的订单生成和支付等操作，但是都只是成功的幸运儿才会走到那一步，那一旦100个产品卖光了，return了一个false，前端直接秒杀结束，然后你后端也关闭后续无效请求的介入了。
+
+8. 库存预热：秒杀的本质，就是对库存的抢夺，每个秒杀的用户来你都去数据库查询库存校验库存，然后扣减库存，撇开性能因数，数据库顶不住。Redis能抗住，提前把商品的库存加载到Redis中去，让整个流程都在Redis里面去做，然后等秒杀介绍了，再异步的去修改库存就好了。 分布式锁控制修改库存；redis事务+watch控制；Lua脚本是类似Redis事务，有一定的原子性，不会被其他命令插队，可以完成一些Redis事务性的操作。 
+
+9. 补救措施：限流->服务降级->熔断->隔离
+
+ 示意图：![img](https://tva1.sinaimg.cn/large/006y8mN6ly1g92dbyzsm7j30u80tqq4t.jpg) 
+
+# 其他
 
 
 
