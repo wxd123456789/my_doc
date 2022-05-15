@@ -3598,13 +3598,27 @@ func (d *namespacedResourcesDeleter) deleteAllContentForGroupVersionResource(
 
 # 有状态服务控制器
 
+`StatefulSet` 类似于 `ReplicaSet`，但是它可以处理 Pod 的启动顺序，为保留每个 Pod 的状态设置唯一标识，具有以下几个功能特性： 
+
+- 稳定的、唯一的网络标识符
+- 稳定的、持久化的存储
+- 有序的、优雅的部署和缩放
+- 有序的、优雅的删除和终止
+- 有序的、自动滚动更新
+
+`StatefulSet` 资源清单中和 `volumeMounts` 进行关联的不是 `volumes` 而是一个新的属性：`volumeClaimTemplates`，该属性会自动创建一个 PVC 对象，其实这里就是一个 PVC 的模板，和 Pod 模板类似，PVC 被创建后会自动去关联当前系统中和他合适的 PV 进行绑定。除此之外，还多了一个 `serviceName: "nginx"` 的字段，`serviceName` 就是管理当前 `StatefulSet` 的服务名称，该服务必须在 StatefulSet 之前存在，并且负责该集合的网络标识，Pod 会遵循以下格式获取 DNS/主机名：`pod-specific-string.serviceName.default.svc.cluster.local`，其中 `pod-specific-string` 由 StatefulSet 控制器管理。 
+
+`StatefulSet` 的拓扑结构和其他用于部署的资源对象其实比较类似，比较大的区别在于 `StatefulSet` 引入了 PV 和 PVC 对象来持久存储服务产生的状态，这样所有的服务虽然可以被杀掉或者重启，但是其中的数据由于 PV 的原因不会丢失。 
+
+
+
 
 
 # 守护服务控制器
 
-
+DaemonSet 可以保证集群中所有的或者部分的节点都能够运行同一份 Pod 副本，每当有新的节点被加入到集群时，Pod 就会在目标的节点上启动，如果节点被从集群中剔除，节点上的 Pod 也会被垃圾收集器清除；DaemonSet 的作用就像是计算机中的守护进程，它能够运行集群存储、日志收集和监控等『守护进程』，这些服务一般是集群中必备的基础服务。 
 
 # volume控制器
 
-
+https://rootdeep.github.io/posts/volume-management-part1/
 
